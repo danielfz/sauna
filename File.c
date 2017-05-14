@@ -33,7 +33,7 @@ F* F_new_buffered(const char* name,const char* mode,int isConc) {
 }
 
 F* F_new_unbuffered(const char* name,const int write,int isConc) {
-    int flags = O_CREAT | (write ? O_RDONLY : O_WRONLY);
+    int flags = O_CREAT | (write ? O_WRONLY : O_RDONLY);
     int fd = open(name,flags,0666);
     if (fd < 0) { printf("Erro a abrir ficheiro\n"); return NULL; }
 
@@ -78,7 +78,6 @@ void F_printstring(F* f,char* msg) {
     if (f->isBuffered) {
         fprintf(f->fp,msg);
     } else {
-        printf("fwrite: %s",msg);
         write(f->fd,msg,strlen(msg));
         /*
         // teste
@@ -92,19 +91,17 @@ void F_printstring(F* f,char* msg) {
 }
 
 size_t F_readstring(F* f,char* buf) {
-    size_t count = 0;
     if (f->isConcurrent) { pthread_mutex_lock(&f->mutex); }
+    size_t count = 0;
     if (f->isBuffered) {
         // TODO
     } else {
         do {
             while (read(f->fd,buf+count,1) == 0)
                 ;
-            ++count;
-        } while (buf[count] != '\n');
-        buf[count+1] = '\0';
-        printf("fread: %s\n",buf);
+        } while (buf[count++] != '\n');
+        buf[count-1] = '\0';
     }
     if (f->isConcurrent) { pthread_mutex_unlock(&f->mutex); }
-    return 0;
+    return count;
 }
