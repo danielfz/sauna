@@ -18,13 +18,14 @@ static double ticks_to_mili(clock_t ticks) {
 }
 
 void init_time() {
-    START_TICK = times(NULL);
+    struct tms buf;
+    START_TICK = times(&buf);
     TICKS_SEC = (double)sysconf(_SC_CLK_TCK);
 }
 
 double get_time_mili() {
-    clock_t dt = times(NULL)-START_TICK;
-    printf("dt: %ld\n",dt);
+    struct tms buf;
+    clock_t dt = times(&buf)-START_TICK;
     return ticks_to_mili(dt);
 }
 
@@ -39,7 +40,7 @@ void log_request(F* f,struct Request* req,char* state,pid_t pid,pthread_t tid,in
             req->gender==MALE? 'M' : 'F',
             req->duration);
     if (useTid) {
-        sprintf(msg+n-2," - %d\n",tid);
+        sprintf(msg+n-2," - %lu\n",tid);
     }
     F_printstring(f,msg);
 
@@ -54,7 +55,6 @@ void put_request(F* f,struct Request* req) {
             req->id,
             req->gender==MALE? 'M' : 'F',
             req->duration);
-    printf("put: %s\n",msg);
     F_printstring(f,msg);
 }
 
@@ -62,8 +62,15 @@ struct Request get_request(F* f) {
     char buf[128];
     F_readstring(f,buf);
     struct Request req;
-    sscanf(buf,"%u %c %u",&(req.id),&(req.gender),&(req.duration));
-    printf("id: %u, gender=%c, dur=%u\n",req.id,req.gender,req.duration);
+    char c;
+    sscanf(buf,"%u %c %u",&(req.id),&c,&(req.duration));
+    if (c == 'M') {
+        req.gender = MALE;
+    } else if (c == 'F') {
+        req.gender = FEMALE;
+    } else {
+        printf("ERROR IN FIFO: gender\n");
+    }
     return req;
 }
 

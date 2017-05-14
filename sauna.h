@@ -22,8 +22,6 @@ struct Stats {
     struct Counter discarded;
 };
 
-enum time_e { SEC, MILI, MICRO };
-
 static const int g_debug = 1;
 
 // ------------------

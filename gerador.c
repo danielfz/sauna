@@ -14,6 +14,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <stdlib.h>
 
 #define LOG_FILE "/tmp/ger.%d"
 #define MAXLEN_MSG 128
@@ -21,7 +22,6 @@
 struct GeneratorOptions {
     unsigned numRequests;
     unsigned maxDuration;
-    enum time_e time;
     F* logF;
     F* entF;
 
@@ -34,7 +34,6 @@ struct GeneratorOptions {
 
 struct RejectedProcessorOptions {
     unsigned numAttempts;
-    enum time_e time;
     F* logF;
     F* entF;
 
@@ -54,17 +53,19 @@ static pid_t g_pid;
 
 struct Request genRandomRequest(unsigned maxDuration) {
     struct Request req;
-    req.id = 0;
-    req.duration = 10;
-    req.gender = MALE;
+    req.duration = rand() % maxDuration;
+    int randomGender = rand() % 2;
+    if(randomGender == 0)
+        req.gender = MALE;
+    else
+        req.gender = FEMALE;
     return req;
 }
 
 void* generator_thread(void* args) {
     struct GeneratorOptions* opt = (struct GeneratorOptions*)args;
 
-    unsigned count = 0;
-    for (int id=0; id < opt->numRequests; id++) {
+    for (unsigned id=0; id < opt->numRequests; id++) {
         struct Request req = genRandomRequest(opt->maxDuration);
         req.id = id;
         if (req.gender == MALE) {
@@ -81,39 +82,38 @@ void* generator_thread(void* args) {
 }
 
 void* rejected_requests_processor_thread(void* args) {
+    //unsigned* numRej = malloc(numP*sizeof(unsigned));
+
     struct RejectedProcessorOptions* opt = 
         (struct RejectedProcessorOptions*)args;
 
     F* f = F_new_unbuffered(FIFO_REJEITADOS,RW_READ,CONC_FALSE);
-    int fd = open(FIFO_REJEITADOS,O_RDONLY);
-    if (fd < 0) {
-        printf("Erro a abrir fifo\n");
-        g_finish = 1;
-        return NULL;
-    }
+    if (!f) { printf("erro\n"); return NULL; }
 
     // TODO: 
     while (1) {
-        //struct Request req = get_request();
-        //put_request(opt->reqF,&req,"PEDIDO");
+        struct Request req = get_request(f);
+        put_request(opt->entF,&req);
+
         if (g_finish) {
             break;
         }
     }
 
-    close(fd);
+    //F_destroy(f);
     return NULL;
 }
 
 void printRequestCounts(char* msg,unsigned m,unsigned f) {
-    printf("Pedidos %s (total)\n",msg,m+f);
-    printf("Pedidos %s (masculino)\n",msg,m);
-    printf("Pedidos %s (feminino)\n",msg,f);
+    printf("Pedidos %s (total): %u\n",msg,m+f);
+    printf("Pedidos %s (masculino): %u\n",msg,m);
+    printf("Pedidos %s (feminino): %u\n",msg,f);
 }
 
 
 int main(int argc,char* argv[])
 {
+    srand(time(NULL));
     g_pid = getpid();
 
     /* Ficheiros */
@@ -134,17 +134,14 @@ int main(int argc,char* argv[])
         printf("  <max. utilização>: tempo máximo de execução\n");
         printf("  <un. tempo>: segundo \'s\', mili \'m\', ou micro \'u\'\n");
     }
-    enum time_e time_opt = SEC;
 
     struct GeneratorOptions opts1;
     opts1.numRequests = 100;
     opts1.maxDuration = 10;
-    opts1.time = time_opt;
     opts1.logF = flog;
     opts1.entF = fent;
 
     struct RejectedProcessorOptions opts2;
-    opts2.time = time_opt;
     opts2.numAttempts = 3;
     opts2.logF = flog;
     opts2.entF = fent;

@@ -9,6 +9,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#define DEBUG 1
+
 static F* F_new(const char* name,const int isConcurrent) {
     F* f = malloc(sizeof(F));
     if (!f) { printf("Erro de memória\n"); return NULL; }
@@ -76,7 +78,7 @@ void F_destroy(F* f) {
 void F_printstring(F* f,char* msg) {
     if (f->isConcurrent) { pthread_mutex_lock(&f->mutex); }
     if (f->isBuffered) {
-        fprintf(f->fp,msg);
+        fprintf(f->fp,"%s",msg);
     } else {
         write(f->fd,msg,strlen(msg));
         /*
@@ -88,6 +90,10 @@ void F_printstring(F* f,char* msg) {
         */
     }
     if (f->isConcurrent) { pthread_mutex_unlock(&f->mutex); }
+
+    if (DEBUG) {
+        printf("printstring: \"%s\"\n",msg);
+    }
 }
 
 size_t F_readstring(F* f,char* buf) {
@@ -103,5 +109,10 @@ size_t F_readstring(F* f,char* buf) {
         buf[count-1] = '\0';
     }
     if (f->isConcurrent) { pthread_mutex_unlock(&f->mutex); }
+
+    if (DEBUG) {
+        printf("readstring: \"%s\"\n",buf);
+    }
+
     return count;
 }
