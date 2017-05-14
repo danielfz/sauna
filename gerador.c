@@ -23,7 +23,7 @@ struct GeneratorOptions {
     unsigned maxDuration;
     enum time_e time;
     F* logF;
-    F* reqF;
+    F* entF;
 
     struct GeneratorResult {
         unsigned maleReqsCount;
@@ -36,7 +36,7 @@ struct RejectedProcessorOptions {
     unsigned numAttempts;
     enum time_e time;
     F* logF;
-    F* reqF;
+    F* entF;
 
     struct RejectedProcessorResult {
         unsigned acceptedMaleReqsCount;
@@ -54,19 +54,10 @@ static pid_t g_pid;
 
 struct Request genRandomRequest(unsigned maxDuration) {
     struct Request req;
-    // TODO
+    req.id = 0;
     req.duration = 10;
     req.gender = MALE;
     return req;
-}
-
-void put_request(F* cf,struct Request* req) {
-    char msg[MAXLEN_MSG];
-    sprintf(msg,"%d %c %d\n",
-            req->id,
-            req->gender==MALE? 'M' : 'F',
-            req->duration);
-    F_printstring(cf,msg);
 }
 
 void* generator_thread(void* args) {
@@ -81,18 +72,12 @@ void* generator_thread(void* args) {
         } else {
             ++(opt->result.femaleReqsCount);
         }
-        //put_request(opt->reqF,&req);
+        put_request(opt->entF,&req);
         log_request(opt->logF,&req,"PEDIDO",g_pid,0,0);
     }
 
     g_finish = 1;
     return NULL;
-}
-
-struct Request get_request() {
-    struct Request request;
-    // TODO
-    return request;
 }
 
 void* rejected_requests_processor_thread(void* args) {
@@ -133,8 +118,8 @@ int main(int argc,char* argv[])
 
     /* Ficheiros */
 
-    F* fout = F_new_unbuffered(FIFO_ENTRADA,RW_WRITE,CONC_TRUE);
-    if (!fout) { return 1; }
+    F* fent = F_new_unbuffered(FIFO_ENTRADA,RW_WRITE,CONC_TRUE);
+    if (!fent) { return 1; }
 
     char logname[128];
     sprintf(logname,LOG_FILE,g_pid);
@@ -156,13 +141,15 @@ int main(int argc,char* argv[])
     opts1.maxDuration = 10;
     opts1.time = time_opt;
     opts1.logF = flog;
-    opts1.reqF = fout;
+    opts1.entF = fent;
 
     struct RejectedProcessorOptions opts2;
     opts2.time = time_opt;
     opts2.numAttempts = 3;
     opts2.logF = flog;
-    opts2.reqF = fout;
+    opts2.entF = fent;
+
+    init_time();
 
     /* threads */
 
@@ -188,7 +175,7 @@ int main(int argc,char* argv[])
             opts2.result.discardMaleReqsCount,
             opts2.result.discardFemaleReqsCount);
 
-    F_destroy(fout);
+    F_destroy(fent);
     F_destroy(flog);
     return 0;
 }

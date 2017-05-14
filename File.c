@@ -78,6 +78,7 @@ void F_printstring(F* f,char* msg) {
     if (f->isBuffered) {
         fprintf(f->fp,msg);
     } else {
+        printf("fwrite: %s",msg);
         write(f->fd,msg,strlen(msg));
         /*
         // teste
@@ -91,5 +92,18 @@ void F_printstring(F* f,char* msg) {
 }
 
 size_t F_readstring(F* f,char* buf) {
+    size_t count = 0;
+    if (f->isConcurrent) { pthread_mutex_lock(&f->mutex); }
+    if (f->isBuffered) {
+        // TODO
+    } else {
+        while (read(f->fd,buf+count,1)>0 && buf[count] != '\n') {
+            printf("- %c\n",buf[count]);
+            ++count;
+        }
+        buf[count+1] = '\0';
+        printf("fread: %s",buf);
+    }
+    if (f->isConcurrent) { pthread_mutex_unlock(&f->mutex); }
     return 0;
 }

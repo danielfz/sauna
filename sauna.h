@@ -28,5 +28,9 @@ static const int g_debug = 1;
 
 // ------------------
 
-void log_request(F* f,struct Request* req,char* state,pid_t pid,pthread_t tid,int useTid);
+void init_time();
+double get_time_mili();
 
+void log_request(F* f,struct Request* req,char* state,pid_t pid,pthread_t tid,int useTid);
+void put_request(F* f,struct Request* req);
+struct Request get_request(F* f);

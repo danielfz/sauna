@@ -15,27 +15,19 @@
 
 #define LOG_FILE "/tmp/bal.%d"
 
-struct Request get_request() {
-}
-
 void* sauna_user(void* args) {
 }
 
 void sauna_manager(F* fin,F* fout) {
-    printf("sleeping...\n");
-    sleep(10);
+    char buf[512];
+    for (int i=0; i < 10; i++) {
+        F_readstring(fin,buf);
+        printf("read: %s\n",buf);
+    }
 }
 
 // -------------------------
 
-
-/*
-int open_fifo(const char* name,const int write) {
-    int fd = open(name,write ? O_WRONLY : O_RDONLY);;
-    if (fd < 0) { printf("Erro a abrir fifo\n"); }
-    return fd;
-}
-*/
 
 int unlink_and_mkfifo(const char*name) {
     unlink(name);
@@ -55,18 +47,19 @@ int main(int argc,char* argv[])
      * à espera que alguém abra F1 e o P2 à espera de F2.
      */
 
-    F* f1 = F_new_unbuffered(FIFO_ENTRADA,RW_READ,CONC_FALSE);
-    if (!f1) { return 1; }
+    F* fin = F_new_unbuffered(FIFO_ENTRADA,RW_READ,CONC_FALSE);
+    if (!fin) { return 1; }
     printf("Sauna: fifo entrada aberto\n");
 
-    F* f2 = F_new_unbuffered(FIFO_REJEITADOS,RW_WRITE,CONC_FALSE);
-    if (!f2) { return 1; }
+    F* fout = F_new_unbuffered(FIFO_REJEITADOS,RW_WRITE,CONC_FALSE);
+    if (!fout) { return 1; }
     printf("Sauna: fifo rejeitados aberto\n");
 
-    sauna_manager(f1,f2);
+    init_time();
+    sauna_manager(fin,fout);
 
-    F_destroy(f1);
-    F_destroy(f2);
+    F_destroy(fin);
+    F_destroy(fout);
     return 0;
 }
 
