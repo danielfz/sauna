@@ -97,12 +97,13 @@ size_t F_readstring(F* f,char* buf) {
     if (f->isBuffered) {
         // TODO
     } else {
-        while (read(f->fd,buf+count,1)>0 && buf[count] != '\n') {
-            printf("- %c\n",buf[count]);
+        do {
+            while (read(f->fd,buf+count,1) == 0)
+                ;
             ++count;
-        }
+        } while (buf[count] != '\n');
         buf[count+1] = '\0';
-        printf("fread: %s",buf);
+        printf("fread: %s\n",buf);
     }
     if (f->isConcurrent) { pthread_mutex_unlock(&f->mutex); }
     return 0;
