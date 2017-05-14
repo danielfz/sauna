@@ -21,8 +21,7 @@ void* sauna_user(void* args) {
 void sauna_manager(F* fin,F* fout) {
     char buf[512];
     for (int i=0; i < 10; i++) {
-        F_readstring(fin,buf);
-        printf("readstring: %s\n",buf);
+        struct Request req = get_request(fin);
     }
 }
 

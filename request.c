@@ -62,7 +62,8 @@ struct Request get_request(F* f) {
     char buf[128];
     F_readstring(f,buf);
     struct Request req;
-    // TODO
+    sscanf(buf,"%u %c %u",&(req.id),&(req.gender),&(req.duration));
+    printf("id: %u, gender=%c, dur=%u\n",req.id,req.gender,req.duration);
     return req;
 }
 

@@ -7,8 +7,8 @@
 
 struct Request {
     unsigned id;
-    unsigned duration;
     enum gender_e { MALE, FEMALE } gender;
+    unsigned duration;
 };
 
 struct Counter {
