@@ -1,0 +1,22 @@
+
+NOTA: Daniel -> G03 na lista, José G10 na lista - houve mudança de grupos
+
+- Daniel Pedro Ferradosa Fazeres, up201502856
+- José Miguel Ferreira Mendes
+
+As situações de competição neste programa advinham do acesso a recursos
+partilhados, sendo eles ficheiros FIFO, ficheiro de registo, e as variáveis que
+mantém o registo dos lugares disponíveis na sauna.
+
+Os ficheiros de registo (log) são usados pelas duas threads do gerador. A
+escrita para este ficheiro deve ser sincronizada, pelo que, apesar de aberto
+nas duas threads ao mesmo tempo, as funções que para ele escrevem estão
+identificadas como regiões críticas, sendo feita uma exclusão mútua por recurso
+a um mutex (usado apenas para este ficheiro).
+
+As threads do gerador também escrevem ambas para o fifo '/tmp/entrada', e o
+mesmo método foi utilizado.
+
+No programa de gestão da sauna, os contadores de lugares vagos são
+implementados como semáforos, recorrendo-se às funções POSIX que lhes servem
+de interface para esta funcionalidade do sistema operativo.

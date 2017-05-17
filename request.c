@@ -5,6 +5,8 @@
 #include <string.h>
 #include <sys/times.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <errno.h>
 
 #define MAXLEN_MSG 128
 
@@ -14,7 +16,7 @@ static clock_t START_TICK;
 static double TICKS_SEC;
 
 static double ticks_to_mili(clock_t ticks) {
-    return (((double)ticks)/TICKS_SEC)*1E6;
+    return (((double)ticks)/TICKS_SEC)*1E3;
 }
 
 void init_time() {
@@ -29,24 +31,41 @@ double get_time_mili() {
     return ticks_to_mili(dt);
 }
 
+void milisleep(double ms) {
+    if (ms == 0.0) { return; }
+    struct timespec rqtp;
+    rqtp.tv_sec = 0;
+    rqtp.tv_nsec = (long)(ms*1E6);
+    while (nanosleep(&rqtp,&rqtp) != 0) {
+        if (errno == EINVAL) {
+            printf("Sleep error\n");
+        }
+    }
+}
+
 // --------------------------------
 
 void log_request(F* f,struct Request* req,char* state,pid_t pid,pthread_t tid,int useTid) {
     char msg[MAXLEN_MSG];
-    int n = sprintf(msg,"%.2f - %05d - %05d: %c - %05d\n",
-            get_time_mili(),    // TODO
-            pid,
-            req->id,
-            req->gender==MALE? 'M' : 'F',
-            req->duration);
-    if (useTid) {
-        sprintf(msg+n-2," - %lu\n",tid);
+    if (!useTid) {
+        sprintf(msg,"%.2f - %05d - %05d: %c - %05d - %s\n",
+                get_time_mili(),
+                pid,
+                req->id,
+                req->gender==MALE? 'M' : 'F',
+                req->duration,
+                state);
+    } else {
+        sprintf(msg,"%.2f - %05d - %05ld - %05d: %c - %05d - %s\n",
+                get_time_mili(),
+                pid,
+                tid,
+                req->id,
+                req->gender==MALE? 'M' : 'F',
+                req->duration,
+                state);
     }
     F_printstring(f,msg);
-
-    if (g_debug) {
-        printf(msg);
-    }
 }
 
 void put_request(F* f,struct Request* req) {
@@ -58,19 +77,24 @@ void put_request(F* f,struct Request* req) {
     F_printstring(f,msg);
 }
 
-struct Request get_request(F* f) {
+int get_request(F* f,struct Request* req) {
     char buf[128];
     F_readstring(f,buf);
-    struct Request req;
-    char c;
-    sscanf(buf,"%u %c %u",&(req.id),&c,&(req.duration));
-    if (c == 'M') {
-        req.gender = MALE;
-    } else if (c == 'F') {
-        req.gender = FEMALE;
-    } else {
-        printf("ERROR IN FIFO: gender\n");
+    if (buf[0] == '\0') {
+        return 1;
     }
-    return req;
+    char c;
+    if (sscanf(buf,"%u %c %u",&(req->id),&c,&(req->duration)) != 3) {
+        printf("ERRO NO FIFO: sscanf\n");
+        return 2;
+    }
+    if (c == 'M') {
+        req->gender = MALE;
+    } else if (c == 'F') {
+        req->gender = FEMALE;
+    } else {
+        printf("ERRO NO FIFO: género\n");
+    }
+    return 0;
 }
 

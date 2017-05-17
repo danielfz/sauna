@@ -9,7 +9,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#define DEBUG 1
+#define DEBUG 0
 
 static F* F_new(const char* name,const int isConcurrent) {
     F* f = malloc(sizeof(F));
@@ -31,6 +31,7 @@ F* F_new_buffered(const char* name,const char* mode,int isConc) {
     if (!f) { return NULL; }
     f->isBuffered = 1;
     f->fp = fp;
+    printf("- Ficheiro (buffered) %s aberto\n",name);
     return f;
 }
 
@@ -43,6 +44,7 @@ F* F_new_unbuffered(const char* name,const int write,int isConc) {
     if (!f) { return NULL; }
     f->isBuffered = 0;
     f->fd = fd;
+    printf("- Ficheiro (unbuffered) %s aberto\n",name);
     return f;
 }
 
@@ -102,11 +104,19 @@ size_t F_readstring(F* f,char* buf) {
     if (f->isBuffered) {
         // TODO
     } else {
+        int tries;
         do {
-            while (read(f->fd,buf+count,1) == 0)
-                ;
-        } while (buf[count++] != '\n');
-        buf[count-1] = '\0';
+            tries = 0;
+            while (read(f->fd,buf+count,1) == 0 && tries<100) {
+                ++tries;
+            }
+        } while ((buf[count++]!='\n') && (tries<100));
+        if (count == 0) {
+            buf[0] = '\0';
+        } else {
+            buf[count-1] = '\0';
+
+        }
     }
     if (f->isConcurrent) { pthread_mutex_unlock(&f->mutex); }
 
